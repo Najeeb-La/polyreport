@@ -144,31 +144,46 @@ with tab1:
                 unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
-        doc_number = st.text_input("Numéro de document", value="MEC3520 DEV4",
+        doc_number = st.text_input("Numéro de document", value="",
+                                    placeholder="ex : MEC3520 DEV4",
                                     help="Laisser vide si non applicable")
-        revision   = st.text_input("Révision", value="--")
+        revision   = st.text_input("Révision", value="--",
+                                    help="'--' pour la première version, 'A' pour la première révision")
     with c2:
         doc_date_raw = st.date_input("Date du document", value=date.today())
         MONTHS_FR = {1:"janvier",2:"février",3:"mars",4:"avril",5:"mai",6:"juin",
                      7:"juillet",8:"août",9:"septembre",10:"octobre",
                      11:"novembre",12:"décembre"}
         doc_date = f"{doc_date_raw.day} {MONTHS_FR[doc_date_raw.month]} {doc_date_raw.year}"
-        semester = st.text_input("Session", value="Hiver 2026")
+
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            season = st.selectbox("Session", ["Hiver","Été","Automne"], index=0,
+                                   label_visibility="visible")
+        with sc2:
+            year_sess = st.number_input("Année", min_value=2020, max_value=2035,
+                                         value=date.today().year, step=1,
+                                         label_visibility="visible")
+        semester = f"{season} {year_sess}"
     with c3:
-        group_number = st.text_input("Groupe-cours n°", value="02",
+        group_number = st.text_input("Groupe-cours n°", value="",
+                                      placeholder="ex : 02",
                                       help="Laisser vide si non applicable")
 
     st.markdown("---")
     st.markdown('<span class="badge">COURS</span> **Cours**', unsafe_allow_html=True)
     cc1, cc2 = st.columns(2)
-    with cc1: course_code = st.text_input("Sigle", value="MEC 3520")
-    with cc2: course_name = st.text_input("Titre du cours",
-                                           value="Industrialisation des produits")
+    with cc1:
+        course_code = st.text_input("Sigle", value="", placeholder="ex : MEC 3520")
+    with cc2:
+        course_name = st.text_input("Titre du cours", value="",
+                                     placeholder="ex : Industrialisation des produits")
 
     st.markdown("---")
     st.markdown('<span class="badge">RAPPORT</span> **Titre du rapport**',
                 unsafe_allow_html=True)
-    report_title = st.text_input("Titre", value="Titre de votre rapport technique")
+    report_title = st.text_input("Titre", value="",
+                                  placeholder="Titre de votre rapport technique")
 
     st.markdown("---")
     st.markdown('<span class="badge">ÉQUIPE</span> **Encadrement et auteur(s)**',
@@ -176,8 +191,8 @@ with tab1:
 
     professors_raw = st.text_input(
         "Présenté à (professeur(s), séparés par virgule)",
-        value="Nom du professeur",
-        help="Ex : Marwan Azzi   ou   Prof. Morin, Dr. Ahmadi"
+        value="", placeholder="ex : Marwan Azzi  ou  Prof. Morin, Dr. Ahmadi",
+        help="Laisser vide si non applicable"
     )
     professors = [p.strip() for p in professors_raw.split(",") if p.strip()]
 
@@ -190,20 +205,23 @@ with tab1:
         st.markdown("""<div class="info-box">
         Format : <code>Nom Prénom | Matricule</code>
         </div>""", unsafe_allow_html=True)
-        m_raw = st.text_input("Nom et matricule", value="Najeeb Lababidi | 2369834",
+        m_raw = st.text_input("Nom et matricule", value="",
+                               placeholder="Nom Prénom | 2XXXXXX",
                                label_visibility="collapsed")
         if "|" in m_raw:
             parts = m_raw.split("|", 1)
             members = [{"name": parts[0].strip(), "matricule": parts[1].strip()}]
-        else:
+        elif m_raw.strip():
             members = [{"name": m_raw.strip(), "matricule": ""}]
+        else:
+            members = []
     else:
         st.markdown('<span class="badge-gray">Équipe</span> '
                     '**Membres** (format : `Nom Prénom | Matricule`, un par ligne)',
                     unsafe_allow_html=True)
         members_raw = st.text_area("Membres", label_visibility="collapsed",
-                                    height=120,
-                                    value="Najeeb Lababidi | 2369834\nVictor Béland | 2381714")
+                                    height=120, value="",
+                                    placeholder="Nom Prénom | 2XXXXXX\nNom Prénom | 2XXXXXX")
         members = []
         for line in members_raw.strip().split("\n"):
             line = line.strip()
@@ -234,7 +252,12 @@ with tab2:
     st.markdown("---")
     st.markdown('<span class="badge">EN</span> **Abstract**', unsafe_allow_html=True)
 
-    # ── Bouton de traduction gratuit (deep-translator → Google Translate) ──
+    # ── Bouton de traduction gratuit (Google Translate, sans clé API) ──
+
+    # Initialiser la valeur du textarea AVANT son rendu (pattern correct Streamlit)
+    if "abstract_field" not in st.session_state:
+        st.session_state["abstract_field"] = ""
+
     col_abs, col_btn = st.columns([4, 1])
     with col_abs:
         abstract_en = st.text_area("Abstract", label_visibility="collapsed",
@@ -252,6 +275,8 @@ with tab2:
             st.warning("Écris d'abord ton résumé en français.")
         else:
             with st.spinner("Traduction en cours…"):
+                translated   = None
+                error_detail = None
                 try:
                     from deep_translator import GoogleTranslator
                     text = resume_fr.strip()
@@ -261,30 +286,32 @@ with tab2:
                         translated = GoogleTranslator(
                             source='fr', target='en').translate(text)
                     else:
-                        # Découper par paragraphes si texte long
                         parts = [p for p in text.split("\n\n") if p.strip()]
                         translated = "\n\n".join(
                             GoogleTranslator(source='fr', target='en').translate(p)
                             for p in parts
                         )
+                except Exception as e:
+                    error_detail = str(e)
 
-                    if translated:
-                        st.session_state["abstract_field"] = translated
-                        st.success("✅ Traduction générée — vérifie les termes techniques.")
-                        st.rerun()
-                    else:
-                        st.error("Traduction vide — réessaie.")
+            if translated and translated.strip():
+                # Modifier la session_state AVANT le prochain render, puis rerun
+                st.session_state["abstract_field"] = translated.strip()
+                st.session_state["_translation_success"] = True
+                st.rerun()
+            else:
+                st.markdown(f"""<div class="warn-box">
+                ⚠️ Traduction automatique indisponible pour le moment
+                {f"({error_detail})" if error_detail else ""}.<br>
+                <b>Alternative gratuite en 30 secondes :</b>
+                copie ton résumé → colle sur
+                <a href="https://www.deepl.com/translator" target="_blank">
+                <b>DeepL.com</b></a> (gratuit, excellente qualité technique)
+                → colle le résultat dans le champ Abstract ci-dessus.
+                </div>""", unsafe_allow_html=True)
 
-                except Exception:
-                    # Fallback propre si deep-translator indisponible
-                    st.markdown("""<div class="warn-box">
-                    ⚠️ Traduction automatique temporairement indisponible.<br>
-                    <b>Alternative gratuite en 30 secondes :</b><br>
-                    Copie ton résumé → colle sur
-                    <a href="https://www.deepl.com/translator" target="_blank">
-                    <b>DeepL.com</b></a> (gratuit, excellente qualité technique)
-                    → colle la traduction dans le champ Abstract.
-                    </div>""", unsafe_allow_html=True)
+    if st.session_state.pop("_translation_success", False):
+        st.success("✅ Traduction générée — vérifie les termes techniques avant de remettre.")
 
     keywords_en = st.text_input("Keywords EN (comma-separated)",
                                  placeholder="ex: turbofan, propulsion, efficiency")
