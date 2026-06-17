@@ -112,6 +112,53 @@ def _run(para, text, font, size_pt, bold=False, italic=False, color=None):
     return r
 
 
+def _add_hyperlink(paragraph, url, text, font, size_pt, color_hex="0563C1"):
+    """
+    Insère un VRAI lien hyperlien cliquable dans Word (pas juste du texte coloré).
+    Crée une relation r:id dans le document et un élément <w:hyperlink>.
+    """
+    part = paragraph.part
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True
+    )
+
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    # Couleur bleue standard hyperlien
+    color = OxmlElement('w:color')
+    color.set(qn('w:val'), color_hex)
+    rPr.append(color)
+
+    # Soulignement standard hyperlien
+    u = OxmlElement('w:u')
+    u.set(qn('w:val'), 'single')
+    rPr.append(u)
+
+    # Police et taille
+    rFonts = OxmlElement('w:rFonts')
+    rFonts.set(qn('w:ascii'), font)
+    rFonts.set(qn('w:hAnsi'), font)
+    rPr.append(rFonts)
+    sz = OxmlElement('w:sz')
+    sz.set(qn('w:val'), str(int(size_pt * 2)))  # demi-points
+    rPr.append(sz)
+
+    new_run.append(rPr)
+    t = OxmlElement('w:t')
+    t.text = text
+    new_run.append(t)
+    hyperlink.append(new_run)
+
+    paragraph._p.append(hyperlink)
+    return hyperlink
+
+
 def _para(doc, text="", font="Cambria", size=12,
           bold=False, italic=False, color=None,
           align=WD_ALIGN_PARAGRAPH.LEFT,
@@ -693,15 +740,12 @@ def build_references(doc, config):
         r = p.add_run(prefix + formatted)
         r.font.name=font; r.font.size=Pt(size)
 
-        # URL en hyperlien si présente
+        # Lien hyperlien RÉEL et cliquable (pas juste du texte coloré)
         if url:
-            p2 = doc.add_paragraph()
-            p2.paragraph_format.left_indent = Cm(0.75)
-            p2.paragraph_format.space_before = Pt(0)
-            p2.paragraph_format.space_after  = Pt(4)
-            ru = p2.add_run(f"    {url}")
-            ru.font.name=font; ru.font.size=Pt(size-1)
-            ru.font.color.rgb = RGBColor(0,70,180)
+            sep = p.add_run("  —  ")
+            sep.font.name = font; sep.font.size = Pt(size-1)
+            sep.font.color.rgb = POLY_GRAY
+            _add_hyperlink(p, url, url, font, size-1)
 
 
 # ─────────────────────────────────────────────

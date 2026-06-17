@@ -25,45 +25,117 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-  .hero {
-    background: linear-gradient(135deg,#CC0000 0%,#8B0000 100%);
-    padding:1.5rem 2rem 1.2rem; border-radius:12px;
-    margin-bottom:1.4rem;
+  /* ── Hero header ── */
+  .hero-wrap {
+    background: linear-gradient(120deg,#A60000 0%,#7A0000 100%);
+    border-radius: 14px;
+    padding: 1.6rem 2rem;
+    margin-bottom: 1.6rem;
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    box-shadow: 0 2px 14px rgba(166,0,0,0.18);
   }
-  .hero h1 { color:white; margin:0; font-size:1.5rem; font-weight:700; }
-  .hero .sub    { color:rgba(255,255,255,.82); font-size:.87rem; margin:.3rem 0 0; }
-  .hero .credit { color:rgba(255,255,255,.65); font-size:.76rem; margin:.55rem 0 0; }
+  .hero-logo {
+    background: white;
+    border-radius: 10px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .hero-text h1 {
+    color: white; margin: 0; font-size: 1.5rem; font-weight: 700;
+    letter-spacing: -.01em;
+  }
+  .hero-text .sub {
+    color: rgba(255,255,255,.85); font-size: .88rem; margin: .35rem 0 0;
+    font-weight: 500;
+  }
+  .hero-text .credit {
+    color: rgba(255,255,255,.62); font-size: .76rem; margin: .55rem 0 0;
+    line-height: 1.5;
+  }
 
+  /* ── Badges ── */
   .badge {
-    background:#CC0000; color:white;
-    padding:.13rem .52rem; border-radius:10px;
-    font-size:.71rem; font-weight:700; margin-right:.4rem;
+    background:#A60000; color:white;
+    padding:.16rem .58rem; border-radius:5px;
+    font-size:.7rem; font-weight:700; letter-spacing:.02em;
+    margin-right:.45rem; text-transform: uppercase;
   }
   .badge-gray {
-    background:#555; color:white;
-    padding:.13rem .52rem; border-radius:10px;
-    font-size:.71rem; font-weight:700; margin-right:.4rem;
+    background:#444; color:white;
+    padding:.16rem .58rem; border-radius:5px;
+    font-size:.7rem; font-weight:700; letter-spacing:.02em;
+    margin-right:.45rem; text-transform: uppercase;
   }
+
+  /* ── Info boxes ── */
   .info-box {
-    background:#f8f8f8; border-left:3px solid #CC0000;
-    padding:.5rem .85rem; border-radius:0 6px 6px 0;
-    margin:.4rem 0; font-size:.82rem; color:#555;
+    background:#F7F7F8; border-left:3px solid #A60000;
+    padding:.6rem .9rem; border-radius:0 8px 8px 0;
+    margin:.5rem 0; font-size:.83rem; color:#444; line-height:1.5;
   }
   .warn-box {
-    background:#fff8e1; border-left:3px solid #f9a825;
-    padding:.5rem .85rem; border-radius:0 6px 6px 0;
-    margin:.4rem 0; font-size:.82rem; color:#666;
+    background:#FFF7E6; border-left:3px solid #E8A33D;
+    padding:.6rem .9rem; border-radius:0 8px 8px 0;
+    margin:.5rem 0; font-size:.83rem; color:#5a4a2a; line-height:1.5;
   }
   .success-box {
-    background:#e8f5e9; border-left:3px solid #2e7d32;
-    padding:.5rem .85rem; border-radius:0 6px 6px 0;
-    margin:.4rem 0; font-size:.82rem; color:#2e7d32;
+    background:#EAF7ED; border-left:3px solid #2E9E50;
+    padding:.6rem .9rem; border-radius:0 8px 8px 0;
+    margin:.5rem 0; font-size:.83rem; color:#1d6b35; line-height:1.5;
+  }
+
+  /* ── Section divider label ── */
+  .section-label {
+    font-size: .95rem; font-weight: 700; color: #1a1a1a;
+    margin: .2rem 0 .6rem;
+  }
+
+  /* ── Tabs ── */
+  div[data-testid="stTabs"] button {
+    font-size: .92rem;
   }
   div[data-testid="stTabs"] button[aria-selected="true"] {
-    border-bottom:3px solid #CC0000 !important;
-    color:#CC0000 !important; font-weight:600;
+    border-bottom: 3px solid #A60000 !important;
+    color: #A60000 !important; font-weight: 700;
   }
-  section[data-testid="stSidebar"] { background:#fafafa; }
+
+  /* ── Sidebar ── */
+  section[data-testid="stSidebar"] {
+    background: #FAFAFA;
+    border-right: 1px solid #ECECEC;
+  }
+  section[data-testid="stSidebar"] h3 {
+    font-size: 1rem; color: #1a1a1a;
+  }
+
+  /* ── Expanders : plus de respiration et bordure subtile ── */
+  div[data-testid="stExpander"] {
+    border: 1px solid #E8E8E8 !important;
+    border-radius: 8px !important;
+    margin-bottom: .5rem;
+  }
+
+  /* ── Primary button ── */
+  button[kind="primary"] {
+    background: #A60000 !important;
+    border: none !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+  }
+  button[kind="primary"]:hover {
+    background: #8a0000 !important;
+  }
+
+  /* ── Footer credit ── */
+  .footer-credit {
+    font-size: .74rem; color: #999; text-align: center; line-height: 1.6;
+  }
+  .footer-credit a { color: #A60000; text-decoration: none; font-weight: 600; }
+  .footer-credit a:hover { text-decoration: underline; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -74,21 +146,25 @@ st.markdown("""
 _DIR  = os.path.dirname(os.path.abspath(__file__))
 _LOGO = os.path.join(_DIR, "poly_logo.png")
 
-col_logo, col_txt = st.columns([1, 4])
-with col_logo:
-    if os.path.exists(_LOGO):
-        st.image(_LOGO, width=155)
-with col_txt:
-    st.markdown("""
-    <div class="hero">
-      <h1>📄 PolyReport — Générateur de rapports techniques</h1>
-      <div class="sub">Polytechnique Montréal &nbsp;·&nbsp; Rapports techniques académiques &nbsp;·&nbsp; 100 % gratuit</div>
-      <div class="credit">
-        Développé par <strong>Najeeb Lababidi</strong> · Étudiant en génie aérospatial, Polytechnique Montréal<br>
-        Génère le squelette Word complet — tu écris ton texte directement dans le .docx
-      </div>
+import base64
+_logo_b64 = ""
+if os.path.exists(_LOGO):
+    with open(_LOGO, "rb") as _f:
+        _logo_b64 = base64.b64encode(_f.read()).decode()
+
+st.markdown(f"""
+<div class="hero-wrap">
+  {f'<div class="hero-logo"><img src="data:image/png;base64,{_logo_b64}" width="130"></div>' if _logo_b64 else ''}
+  <div class="hero-text">
+    <h1>📄 PolyReport — Générateur de rapports techniques</h1>
+    <div class="sub">Polytechnique Montréal · Rapports techniques académiques · 100&nbsp;% gratuit</div>
+    <div class="credit">
+      Développé par <strong>Najeeb Lababidi</strong> · Étudiant en génie aérospatial, Polytechnique Montréal<br>
+      Génère le squelette Word complet — tu écris ton texte directement dans le .docx
     </div>
-    """, unsafe_allow_html=True)
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # SIDEBAR
@@ -98,7 +174,7 @@ with st.sidebar:
     st.markdown("### ⚙️ Mise en forme")
     st.markdown("---")
     font      = st.selectbox("Police", FONTS_AVAILABLE, index=0,
-                              help="Gabarit officiel Poly : Cambria")
+                              help="Cambria est recommandée pour les rapports académiques")
     font_size = st.slider("Taille du corps (pt)", 10, 14, 12)
     ref_style = st.selectbox("Style de références", REF_STYLES, index=0,
                               help="IEEE recommandé en génie")
@@ -115,11 +191,10 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("""
-    <div style="font-size:.73rem;color:#aaa;text-align:center">
-    Outil gratuit pour les étudiants de Poly<br>
+    <div class="footer-credit">
+    Outil gratuit pour les étudiants de Polytechnique Montréal<br>
     © Najeeb Lababidi · Génie aérospatial<br>
-    <a href="mailto:najeeb.lababidi@etud.polymtl.ca" style="color:#CC0000">
-    Signaler un problème</a>
+    <a href="mailto:najeeb.lababidi@etud.polymtl.ca">Signaler un problème</a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -139,7 +214,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # TAB 1 — IDENTIFICATION
 # ══════════════════════════════════════════════
 with tab1:
-    st.markdown('<span class="badge">DOC</span> **Informations du document**',
+    st.markdown('<span class="badge">Document</span><span class="section-label">Informations générales</span>',
                 unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
@@ -164,7 +239,8 @@ with tab1:
                                       help="Laisser vide si non applicable")
 
     st.markdown("---")
-    st.markdown('<span class="badge">COURS</span> **Cours**', unsafe_allow_html=True)
+    st.markdown('<span class="badge">Cours</span><span class="section-label">Cours associé</span>',
+                unsafe_allow_html=True)
     cc1, cc2 = st.columns(2)
     with cc1:
         course_code = st.text_input("Sigle", value="", placeholder="ex : MEC 3520")
@@ -173,13 +249,13 @@ with tab1:
                                      placeholder="ex : Industrialisation des produits")
 
     st.markdown("---")
-    st.markdown('<span class="badge">RAPPORT</span> **Titre du rapport**',
+    st.markdown('<span class="badge">Rapport</span><span class="section-label">Titre du rapport</span>',
                 unsafe_allow_html=True)
     report_title = st.text_input("Titre", value="",
                                   placeholder="Titre de votre rapport technique")
 
     st.markdown("---")
-    st.markdown('<span class="badge">ÉQUIPE</span> **Encadrement et auteur(s)**',
+    st.markdown('<span class="badge">Équipe</span><span class="section-label">Encadrement et auteur(s)</span>',
                 unsafe_allow_html=True)
 
     professors_raw = st.text_input(
@@ -189,11 +265,12 @@ with tab1:
     )
     professors = [p.strip() for p in professors_raw.split(",") if p.strip()]
 
-    is_individual = st.toggle("🎓 Travail individuel (pas de tableau signatures)",
+    is_individual = st.toggle("🎓 Travail individuel — pas de tableau de signatures",
                                value=False)
 
     if is_individual:
-        st.markdown('<span class="badge-gray">Étudiant</span> **Vos informations**',
+        st.markdown('<span class="badge-gray">Étudiant</span>'
+                    '<span class="section-label">Vos informations</span>',
                     unsafe_allow_html=True)
         st.markdown("""<div class="info-box">
         Format : <code>Nom Prénom | Matricule</code>
@@ -209,9 +286,12 @@ with tab1:
         else:
             members = []
     else:
-        st.markdown('<span class="badge-gray">Équipe</span> '
-                    '**Membres** (format : `Nom Prénom | Matricule`, un par ligne)',
+        st.markdown('<span class="badge-gray">Équipe</span>'
+                    '<span class="section-label">Membres</span>',
                     unsafe_allow_html=True)
+        st.markdown("""<div class="info-box">
+        Format : <code>Nom Prénom | Matricule</code> — un membre par ligne.
+        </div>""", unsafe_allow_html=True)
         members_raw = st.text_area("Membres", label_visibility="collapsed",
                                     height=120, value="",
                                     placeholder="Nom Prénom | 2XXXXXX\nNom Prénom | 2XXXXXX")
@@ -235,7 +315,7 @@ with tab2:
     L'abstract est une traduction fidèle du résumé.
     </div>""", unsafe_allow_html=True)
 
-    st.markdown('<span class="badge">FR</span> **Résumé en français**',
+    st.markdown('<span class="badge">FR</span><span class="section-label">Résumé en français</span>',
                 unsafe_allow_html=True)
     resume_fr   = st.text_area("Résumé", label_visibility="collapsed", height=170,
                                 placeholder="Coller ou écrire votre résumé ici…")
@@ -243,7 +323,8 @@ with tab2:
                                  placeholder="ex : turbofan, propulsion, efficacité")
 
     st.markdown("---")
-    st.markdown('<span class="badge">EN</span> **Abstract**', unsafe_allow_html=True)
+    st.markdown('<span class="badge">EN</span><span class="section-label">Abstract</span>',
+                unsafe_allow_html=True)
 
     # ── Traduction gratuite (Google Translate, sans clé API) ──
     # Pattern : clé de widget versionnée. Streamlit donne priorité à la valeur
@@ -360,9 +441,11 @@ with tab3:
             st.rerun()
 
     to_del = []
+    LEVEL_LABELS = {1: "Titre principal", 2: "Sous-titre", 3: "Sous-sous-titre", 4: "Sous-section"}
     for i, sec in enumerate(st.session_state.sections):
-        prefix = "§" * sec["level"]
-        with st.expander(f"{prefix} {sec['title']}", expanded=False):
+        indent = "　" * (sec["level"] - 1)   # espace pleine largeur, indentation visuelle propre
+        level_tag = LEVEL_LABELS.get(sec["level"], "")
+        with st.expander(f"{indent}**{sec['title']}**  ·  {level_tag}", expanded=False):
             r1c1, r1c2, r1c3 = st.columns([3, 1, 0.6])
             with r1c1:
                 new_t = st.text_input("Titre", value=sec["title"], key=f"st_{i}")
@@ -682,7 +765,11 @@ with tab5:
 # GÉNÉRATION
 # ─────────────────────────────────────────────
 
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("---")
+st.markdown('<div class="section-label" style="font-size:1.1rem;margin-top:.3rem;">'
+            '🚀 Générer mon rapport</div>', unsafe_allow_html=True)
+
 cb1, cb2 = st.columns([2, 3])
 with cb1:
     gen_clicked = st.button("⚡ Générer le rapport .docx",
