@@ -252,18 +252,24 @@ with tab2:
     st.markdown("---")
     st.markdown('<span class="badge">EN</span> **Abstract**', unsafe_allow_html=True)
 
-    # ── Bouton de traduction gratuit (Google Translate, sans clé API) ──
-
-    # Initialiser la valeur du textarea AVANT son rendu (pattern correct Streamlit)
-    if "abstract_field" not in st.session_state:
-        st.session_state["abstract_field"] = ""
+    # ── Traduction gratuite (Google Translate, sans clé API) ──
+    # Pattern correct : on stocke la VALEUR dans une clé séparée ("abstract_value"),
+    # et on l'injecte comme valeur initiale du widget ("abstract_widget") via value=.
+    # On ne touche JAMAIS directement la clé liée au widget après son rendu —
+    # c'est exactement ce qui causait le StreamlitAPIException.
+    if "abstract_value" not in st.session_state:
+        st.session_state["abstract_value"] = ""
 
     col_abs, col_btn = st.columns([4, 1])
     with col_abs:
-        abstract_en = st.text_area("Abstract", label_visibility="collapsed",
-                                    height=170,
-                                    placeholder="Paste or write your abstract here…",
-                                    key="abstract_field")
+        abstract_en = st.text_area(
+            "Abstract", label_visibility="collapsed", height=170,
+            placeholder="Paste or write your abstract here…",
+            value=st.session_state["abstract_value"],
+            key="abstract_widget",
+        )
+        # Garder la valeur saisie manuellement synchronisée
+        st.session_state["abstract_value"] = abstract_en
     with col_btn:
         st.markdown("<br><br>", unsafe_allow_html=True)
         translate_clicked = st.button("🌐 Traduire\nle résumé",
@@ -295,8 +301,8 @@ with tab2:
                     error_detail = str(e)
 
             if translated and translated.strip():
-                # Modifier la session_state AVANT le prochain render, puis rerun
-                st.session_state["abstract_field"] = translated.strip()
+                # On modifie la clé de STOCKAGE (jamais celle du widget directement)
+                st.session_state["abstract_value"] = translated.strip()
                 st.session_state["_translation_success"] = True
                 st.rerun()
             else:
@@ -309,6 +315,7 @@ with tab2:
                 <b>DeepL.com</b></a> (gratuit, excellente qualité technique)
                 → colle le résultat dans le champ Abstract ci-dessus.
                 </div>""", unsafe_allow_html=True)
+
 
     if st.session_state.pop("_translation_success", False):
         st.success("✅ Traduction générée — vérifie les termes techniques avant de remettre.")
@@ -710,7 +717,7 @@ if gen_clicked:
         "members":       members,
         "is_individual": is_individual,
         "resume_fr":     resume_fr,
-        "abstract_en":   st.session_state.get("abstract_field",""),
+        "abstract_en":   st.session_state.get("abstract_value",""),
         "keywords_fr":   keywords_fr,
         "keywords_en":   keywords_en,
         "sections":      st.session_state.get("sections",[]),
