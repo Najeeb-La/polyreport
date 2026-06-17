@@ -1,7 +1,6 @@
 """
 PolyReport — Générateur de rapport technique
-Polytechnique Montréal · Gabarit S02 Rev.F
-Par Najeeb Lababidi · 100% gratuit, aucune clé API
+Polytechnique Montréal · Par Najeeb Lababidi · 100% gratuit, aucune clé API
 """
 
 import streamlit as st
@@ -83,7 +82,7 @@ with col_txt:
     st.markdown("""
     <div class="hero">
       <h1>📄 PolyReport — Générateur de rapports techniques</h1>
-      <div class="sub">Polytechnique Montréal &nbsp;·&nbsp; Gabarit S02 Rev.F &nbsp;·&nbsp; 100 % gratuit</div>
+      <div class="sub">Polytechnique Montréal &nbsp;·&nbsp; Rapports techniques académiques &nbsp;·&nbsp; 100 % gratuit</div>
       <div class="credit">
         Développé par <strong>Najeeb Lababidi</strong> · Étudiant en génie aérospatial, Polytechnique Montréal<br>
         Génère le squelette Word complet — tu écris ton texte directement dans le .docx
@@ -142,14 +141,8 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.markdown('<span class="badge">DOC</span> **Informations du document**',
                 unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
     with c1:
-        doc_number = st.text_input("Numéro de document", value="",
-                                    placeholder="ex : MEC3520 DEV4",
-                                    help="Laisser vide si non applicable")
-        revision   = st.text_input("Révision", value="--",
-                                    help="'--' pour la première version, 'A' pour la première révision")
-    with c2:
         doc_date_raw = st.date_input("Date du document", value=date.today())
         MONTHS_FR = {1:"janvier",2:"février",3:"mars",4:"avril",5:"mai",6:"juin",
                      7:"juillet",8:"août",9:"septembre",10:"octobre",
@@ -165,7 +158,7 @@ with tab1:
                                          value=date.today().year, step=1,
                                          label_visibility="visible")
         semester = f"{season} {year_sess}"
-    with c3:
+    with c2:
         group_number = st.text_input("Groupe-cours n°", value="",
                                       placeholder="ex : 02",
                                       help="Laisser vide si non applicable")
@@ -253,12 +246,14 @@ with tab2:
     st.markdown('<span class="badge">EN</span> **Abstract**', unsafe_allow_html=True)
 
     # ── Traduction gratuite (Google Translate, sans clé API) ──
-    # Pattern correct : on stocke la VALEUR dans une clé séparée ("abstract_value"),
-    # et on l'injecte comme valeur initiale du widget ("abstract_widget") via value=.
-    # On ne touche JAMAIS directement la clé liée au widget après son rendu —
-    # c'est exactement ce qui causait le StreamlitAPIException.
+    # Pattern : clé de widget versionnée. Streamlit donne priorité à la valeur
+    # cachée du widget (liée à sa clé) sur le paramètre value= au rerun suivant.
+    # En changeant la clé après chaque traduction, on force un widget "neuf"
+    # qui prend bien la nouvelle valeur.
     if "abstract_value" not in st.session_state:
         st.session_state["abstract_value"] = ""
+    if "abstract_ver" not in st.session_state:
+        st.session_state["abstract_ver"] = 0
 
     col_abs, col_btn = st.columns([4, 1])
     with col_abs:
@@ -266,9 +261,8 @@ with tab2:
             "Abstract", label_visibility="collapsed", height=170,
             placeholder="Paste or write your abstract here…",
             value=st.session_state["abstract_value"],
-            key="abstract_widget",
+            key=f"abstract_widget_{st.session_state['abstract_ver']}",
         )
-        # Garder la valeur saisie manuellement synchronisée
         st.session_state["abstract_value"] = abstract_en
     with col_btn:
         st.markdown("<br><br>", unsafe_allow_html=True)
@@ -301,8 +295,8 @@ with tab2:
                     error_detail = str(e)
 
             if translated and translated.strip():
-                # On modifie la clé de STOCKAGE (jamais celle du widget directement)
                 st.session_state["abstract_value"] = translated.strip()
+                st.session_state["abstract_ver"]   += 1   # force un widget neuf
                 st.session_state["_translation_success"] = True
                 st.rerun()
             else:
@@ -555,6 +549,11 @@ with tab4:
     ref_del = []
     for i, ref in enumerate(st.session_state.references):
         preview = ref.get("formatted","")[:55] + "…" if ref.get("formatted") else "Nouvelle référence"
+        # Version du widget : change chaque fois qu'on régénère, force Streamlit
+        # à redessiner le text_area avec la nouvelle valeur au lieu de garder
+        # l'ancienne valeur cachée liée à l'ancienne clé.
+        widget_ver = ref.get("_v", 0)
+
         with st.expander(f"[{i+1}] {preview}", expanded=(not ref.get("formatted"))):
             rc1, rc2, rc3 = st.columns([3, 1, 0.6])
             with rc1:
@@ -574,6 +573,7 @@ with tab4:
                             st.session_state.references[i]["formatted"] = fmt
                             st.session_state.references[i]["status"]    = "ok"
                             st.session_state.references[i]["url"]       = new_url.strip()
+                            st.session_state.references[i]["_v"]        = widget_ver + 1
                         else:
                             st.session_state.references[i]["status"] = "err:" + status
                             st.session_state.references[i]["url"]    = new_url.strip()
@@ -588,7 +588,7 @@ with tab4:
             new_fmt = st.text_area(
                 "Référence formatée (modifiable)",
                 value=ref.get("formatted",""),
-                key=f"rfmt_{i}", height=75,
+                key=f"rfmt_{i}_{widget_ver}", height=75,
                 placeholder="La référence apparaîtra ici, ou entre-la manuellement…"
             )
             st.session_state.references[i]["formatted"] = new_fmt
@@ -705,8 +705,6 @@ if gen_clicked:
         "font":          font,
         "font_size":     font_size,
         "ref_style":     ref_style,
-        "doc_number":    doc_number,
-        "revision":      revision,
         "doc_date":      doc_date,
         "course_code":   course_code,
         "course_name":   course_name,
@@ -728,8 +726,8 @@ if gen_clicked:
     with st.spinner("Génération du rapport en cours…"):
         try:
             buf      = generate_poly_report(config)
-            safe_t   = report_title[:40].replace(" ","_").replace("/","-")
-            filename = f"{doc_number.replace(' ','_')}_{safe_t}.docx"
+            safe_t   = (report_title.strip() or "Rapport_technique")[:50].replace(" ","_").replace("/","-")
+            filename = f"{safe_t}.docx"
             st.success("✅ Rapport généré avec succès !")
             st.download_button(
                 label="📥 Télécharger le .docx",

@@ -1,6 +1,6 @@
 """
-Générateur de rapport technique — Polytechnique Montréal
-Gabarit S02 Rev.F · Python pur (python-docx)
+PolyReport — Générateur de rapport technique
+Polytechnique Montréal · Python pur (python-docx)
 """
 
 from docx import Document
@@ -232,86 +232,53 @@ def _register_poly_styles(doc, font):
 
 
 # ─────────────────────────────────────────────
-# EN-TÊTE S02 Rev.F
+# EN-TÊTE — simple et professionnel
 # ─────────────────────────────────────────────
 
 def _build_header(section, config, font="Cambria"):
-    doc_number  = config.get("doc_number", "").strip()
-    revision    = config.get("revision", "--").strip()
-    doc_date    = config.get("doc_date", "").strip()
-    report_title = config.get("report_title", "Rapport technique")
+    """
+    En-tête épuré : titre du rapport à gauche, numéro de page à droite,
+    fin filet gris discret en dessous. Pas de bloc "Document/Révision"
+    de type contrôle qualité — look rapport académique, pas gabarit ISO.
+    """
+    report_title = config.get("report_title", "").strip()
 
     header = section.header
     header.is_linked_to_previous = False
     for p in header.paragraphs: p.clear()
 
-    tbl = header.add_table(5, 6, width=Inches(6.3))
+    tbl = header.add_table(1, 2, width=Inches(6.3))
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     _no_borders(tbl)
-
-    col_widths_dxa = [1684, 4803, 1248, 972, 420, 437]
-    for row in tbl.rows:
-        for j, cell in enumerate(row.cells):
-            cell.width = Twips(col_widths_dxa[j])
-            _nil_borders(cell)
+    tbl.cell(0,0).width = Inches(4.8)
+    tbl.cell(0,1).width = Inches(1.5)
+    _nil_borders(tbl.cell(0,0)); _nil_borders(tbl.cell(0,1))
 
     fs = 9
 
-    # Ligne 0 : Polytechnique | titre rapport | "Document:" | valeur (merged)
-    r0 = tbl.rows[0]
-    p0 = r0.cells[0].paragraphs[0]
-    ru = p0.add_run("Polytechnique"); ru.font.name=font; ru.font.size=Pt(fs)
-    ru.bold=True; ru.font.color.rgb=POLY_RED
-    p1 = r0.cells[1].paragraphs[0]
-    ru1 = p1.add_run(report_title[:55]); ru1.font.name=font; ru1.font.size=Pt(fs)
-    if doc_number:
-        p2 = r0.cells[2].paragraphs[0]; p2.alignment=WD_ALIGN_PARAGRAPH.RIGHT
-        rl = p2.add_run("Document:"); rl.font.name=font; rl.font.size=Pt(fs); rl.bold=True
-        p3 = r0.cells[3].paragraphs[0]
-        rv = p3.add_run(doc_number); rv.font.name=font; rv.font.size=Pt(fs)
-        r0.cells[3].merge(r0.cells[5])
+    p_left = tbl.cell(0,0).paragraphs[0]
+    r_left = p_left.add_run(report_title[:70] if report_title else "")
+    r_left.font.name = font; r_left.font.size = Pt(fs)
+    r_left.font.color.rgb = POLY_GRAY
 
-    # Ligne 1 : Montréal | | "Révision:" | valeur
-    r1 = tbl.rows[1]
-    ru0 = r1.cells[0].paragraphs[0].add_run("Montréal")
-    ru0.font.name=font; ru0.font.size=Pt(fs); ru0.bold=True; ru0.font.color.rgb=POLY_RED
-    if revision:
-        p12 = r1.cells[2].paragraphs[0]; p12.alignment=WD_ALIGN_PARAGRAPH.RIGHT
-        rl1 = p12.add_run("Révision:"); rl1.font.name=font; rl1.font.size=Pt(fs); rl1.bold=True
-        p13 = r1.cells[3].paragraphs[0]
-        rv1 = p13.add_run(revision); rv1.font.name=font; rv1.font.size=Pt(fs)
-        r1.cells[3].merge(r1.cells[5])
+    p_right = tbl.cell(0,1).paragraphs[0]
+    p_right.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r_pre = p_right.add_run("Page ")
+    r_pre.font.name = font; r_pre.font.size = Pt(fs); r_pre.font.color.rgb = POLY_GRAY
+    _field(p_right, 'PAGE \\* MERGEFORMAT', font, fs)
+    r_mid = p_right.add_run(" / ")
+    r_mid.font.name = font; r_mid.font.size = Pt(fs); r_mid.font.color.rgb = POLY_GRAY
+    _field(p_right, 'SECTIONPAGES \\* MERGEFORMAT', font, fs)
 
-    # Ligne 2 : Page N de M
-    r2 = tbl.rows[2]
-    p22 = r2.cells[2].paragraphs[0]; p22.alignment=WD_ALIGN_PARAGRAPH.RIGHT
-    rl2 = p22.add_run("Page:"); rl2.font.name=font; rl2.font.size=Pt(fs); rl2.bold=True
-    _field(r2.cells[3].paragraphs[0], 'PAGE \\* MERGEFORMAT', font, fs)
-    rde = r2.cells[4].paragraphs[0].add_run("de")
-    rde.font.name=font; rde.font.size=Pt(fs)
-    r2.cells[4].paragraphs[0].alignment=WD_ALIGN_PARAGRAPH.CENTER
-    _field(r2.cells[5].paragraphs[0], 'SECTIONPAGES \\* MERGEFORMAT', font, fs)
-
-    # Ligne 3 : Date
-    r3 = tbl.rows[3]
-    if doc_date:
-        p32 = r3.cells[2].paragraphs[0]; p32.alignment=WD_ALIGN_PARAGRAPH.RIGHT
-        rl3 = p32.add_run("Date:"); rl3.font.name=font; rl3.font.size=Pt(fs); rl3.bold=True
-        rv3 = r3.cells[3].paragraphs[0].add_run(doc_date)
-        rv3.font.name=font; rv3.font.size=Pt(fs)
-        r3.cells[3].merge(r3.cells[5])
-
-    # Ligne 4 : filet rouge pleine largeur
-    r4    = tbl.rows[4]
-    merged = r4.cells[0].merge(r4.cells[5])
-    p4    = merged.paragraphs[0]
-    p4.paragraph_format.space_before = Pt(2)
-    p4.paragraph_format.space_after  = Pt(0)
-    pPr  = p4._p.get_or_add_pPr()
+    # Filet fin gris discret (pas rouge, pas épais)
+    p_rule = header.add_paragraph()
+    p_rule.paragraph_format.space_before = Pt(3)
+    p_rule.paragraph_format.space_after  = Pt(0)
+    pPr  = p_rule._p.get_or_add_pPr()
     pBdr = OxmlElement('w:pBdr')
     bot  = OxmlElement('w:bottom')
-    bot.set(qn('w:val'),   'single'); bot.set(qn('w:sz'), '18')
-    bot.set(qn('w:space'), '1');      bot.set(qn('w:color'), 'CC0000')
+    bot.set(qn('w:val'),   'single'); bot.set(qn('w:sz'), '4')
+    bot.set(qn('w:space'), '1');      bot.set(qn('w:color'), 'CCCCCC')
     pBdr.append(bot); pPr.append(pBdr)
 
 
@@ -820,7 +787,7 @@ def generate_poly_report(config: dict) -> BytesIO:
 if __name__ == "__main__":
     cfg = {
         "font":"Cambria","font_size":12,
-        "doc_number":"MEC3520 DEV4","revision":"--","doc_date":"9 avril 2026",
+        "doc_number":"","doc_date":"9 avril 2026",
         "course_code":"MEC3520","course_name":"Industrialisation des produits",
         "group_number":"02","report_title":"Recyclage à l'état solide des copeaux métalliques",
         "semester":"Hiver 2026","professors":["Marwan Azzi"],
@@ -853,5 +820,5 @@ if __name__ == "__main__":
         ],
     }
     buf = generate_poly_report(cfg)
-    with open("/home/claude/rapport_poly_S02_RevF.docx","wb") as f: f.write(buf.read())
-    print("✅ Généré: rapport_poly_S02_RevF.docx")
+    with open("/home/claude/rapport_test.docx","wb") as f: f.write(buf.read())
+    print("✅ Généré: rapport_test.docx")
