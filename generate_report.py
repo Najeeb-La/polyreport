@@ -1,5 +1,5 @@
 """
-PolyReport — Générateur de rapport technique
+PolyRapport — Générateur de rapport technique
 Polytechnique Montréal · Python pur (python-docx)
 """
 
@@ -16,11 +16,10 @@ import os
 # CONSTANTES
 # ─────────────────────────────────────────────
 
-POLY_RED  = RGBColor(0xCC, 0x00, 0x00)
-POLY_DARK = RGBColor(0x1F, 0x1F, 0x1F)
-POLY_GRAY = RGBColor(0x59, 0x59, 0x59)
-WHITE     = RGBColor(0xFF, 0xFF, 0xFF)
-LIGHT_GRAY = RGBColor(0xF2, 0xF2, 0xF2)
+POLY_RED   = RGBColor(0xCC, 0x00, 0x00)
+POLY_DARK  = RGBColor(0x1F, 0x1F, 0x1F)
+POLY_GRAY  = RGBColor(0x59, 0x59, 0x59)
+WHITE      = RGBColor(0xFF, 0xFF, 0xFF)
 
 FONTS_AVAILABLE = [
     "Cambria", "Times New Roman", "Arial", "Calibri",
@@ -33,8 +32,7 @@ MARGIN_CM      = 2.5
 HEADER_DIST_CM = 1.25
 FOOTER_DIST_CM = 1.25
 
-# Chemin du logo — même dossier que ce script
-_DIR = os.path.dirname(os.path.abspath(__file__))
+_DIR      = os.path.dirname(os.path.abspath(__file__))
 LOGO_PATH = os.path.join(_DIR, "poly_logo.png")
 
 
@@ -42,9 +40,9 @@ LOGO_PATH = os.path.join(_DIR, "poly_logo.png")
 # HELPERS XML
 # ─────────────────────────────────────────────
 
-def _set_margins(section):
-    section.top_margin      = Cm(MARGIN_CM)
-    section.bottom_margin   = Cm(MARGIN_CM)
+def _set_margins(section, top=MARGIN_CM, bottom=MARGIN_CM):
+    section.top_margin      = Cm(top)
+    section.bottom_margin   = Cm(bottom)
     section.left_margin     = Cm(MARGIN_CM)
     section.right_margin    = Cm(MARGIN_CM)
     section.header_distance = Cm(HEADER_DIST_CM)
@@ -57,8 +55,7 @@ def _no_borders(table):
     if tblPr is None:
         tblPr = OxmlElement('w:tblPr')
         tbl.insert(0, tblPr)
-    for existing in tblPr.findall(qn('w:tblBorders')):
-        tblPr.remove(existing)
+    for e in tblPr.findall(qn('w:tblBorders')): tblPr.remove(e)
     tblBdr = OxmlElement('w:tblBorders')
     for side in ('top','left','bottom','right','insideH','insideV'):
         el = OxmlElement(f'w:{side}')
@@ -112,51 +109,32 @@ def _run(para, text, font, size_pt, bold=False, italic=False, color=None):
     return r
 
 
-def _add_hyperlink(paragraph, url, text, font, size_pt, color_hex="0563C1"):
-    """
-    Insère un VRAI lien hyperlien cliquable dans Word (pas juste du texte coloré).
-    Crée une relation r:id dans le document et un élément <w:hyperlink>.
-    """
-    part = paragraph.part
-    r_id = part.relate_to(
-        url,
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-        is_external=True
-    )
-
-    hyperlink = OxmlElement('w:hyperlink')
-    hyperlink.set(qn('r:id'), r_id)
-
-    new_run = OxmlElement('w:r')
-    rPr = OxmlElement('w:rPr')
-
-    # Couleur bleue standard hyperlien
-    color = OxmlElement('w:color')
-    color.set(qn('w:val'), color_hex)
-    rPr.append(color)
-
-    # Soulignement standard hyperlien
-    u = OxmlElement('w:u')
-    u.set(qn('w:val'), 'single')
-    rPr.append(u)
-
-    # Police et taille
-    rFonts = OxmlElement('w:rFonts')
-    rFonts.set(qn('w:ascii'), font)
-    rFonts.set(qn('w:hAnsi'), font)
-    rPr.append(rFonts)
-    sz = OxmlElement('w:sz')
-    sz.set(qn('w:val'), str(int(size_pt * 2)))  # demi-points
-    rPr.append(sz)
-
-    new_run.append(rPr)
-    t = OxmlElement('w:t')
-    t.text = text
-    new_run.append(t)
-    hyperlink.append(new_run)
-
-    paragraph._p.append(hyperlink)
-    return hyperlink
+def _add_hyperlink(paragraph, url, text, font, size_pt):
+    """Vrai lien cliquable Word via relation XML."""
+    try:
+        part = paragraph.part
+        r_id = part.relate_to(
+            url,
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+            is_external=True
+        )
+        hyperlink = OxmlElement('w:hyperlink')
+        hyperlink.set(qn('r:id'), r_id)
+        new_run = OxmlElement('w:r')
+        rPr = OxmlElement('w:rPr')
+        color_el = OxmlElement('w:color'); color_el.set(qn('w:val'), '0563C1')
+        u_el = OxmlElement('w:u');         u_el.set(qn('w:val'), 'single')
+        rFonts = OxmlElement('w:rFonts')
+        rFonts.set(qn('w:ascii'), font); rFonts.set(qn('w:hAnsi'), font)
+        sz_el = OxmlElement('w:sz'); sz_el.set(qn('w:val'), str(int(size_pt*2)))
+        rPr.extend([color_el, u_el, rFonts, sz_el])
+        new_run.append(rPr)
+        t = OxmlElement('w:t'); t.text = text
+        new_run.append(t)
+        hyperlink.append(new_run)
+        paragraph._p.append(hyperlink)
+    except Exception:
+        _run(paragraph, text, font, size_pt, color=RGBColor(5,99,193))
 
 
 def _para(doc, text="", font="Cambria", size=12,
@@ -169,10 +147,8 @@ def _para(doc, text="", font="Cambria", size=12,
     p.paragraph_format.space_after       = Pt(sa)
     p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE \
         if ls == 1.5 else WD_LINE_SPACING.MULTIPLE
-    if ls != 1.5:
-        p.paragraph_format.line_spacing = ls
-    if text:
-        _run(p, text, font, size, bold, italic, color)
+    if ls != 1.5: p.paragraph_format.line_spacing = ls
+    if text: _run(p, text, font, size, bold, italic, color)
     return p
 
 
@@ -181,15 +157,14 @@ def _page_break(doc):
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after  = Pt(0)
     r  = p.add_run()
-    br = OxmlElement('w:br')
-    br.set(qn('w:type'), 'page')
+    br = OxmlElement('w:br'); br.set(qn('w:type'), 'page')
     r._r.append(br)
     return p
 
 
 def _field(para, instr, font, size_pt):
     run = para.add_run()
-    b = OxmlElement('w:fldChar'); b.set(qn('w:fldCharType'), 'begin')
+    b   = OxmlElement('w:fldChar'); b.set(qn('w:fldCharType'), 'begin')
     run._r.append(b)
     ins = OxmlElement('w:instrText'); ins.set(qn('xml:space'), 'preserve')
     ins.text = f' {instr} '; run._r.append(ins)
@@ -197,7 +172,7 @@ def _field(para, instr, font, size_pt):
     run._r.append(s)
     ph = para.add_run("?"); ph.font.name = font; ph.font.size = Pt(size_pt)
     er = para.add_run()
-    e = OxmlElement('w:fldChar'); e.set(qn('w:fldCharType'), 'end')
+    e  = OxmlElement('w:fldChar'); e.set(qn('w:fldCharType'), 'end')
     er._r.append(e)
 
 
@@ -221,7 +196,23 @@ def _toc_field(doc, instr, font, placeholder):
     return p
 
 
-def _add_section_break(doc, break_type='nextPage', pgnum_fmt='decimal', pgnum_start=1):
+def _set_pgnum(section, fmt='decimal', start=1):
+    sectPr = section._sectPr
+    for e in sectPr.findall(qn('w:pgNumType')): sectPr.remove(e)
+    pgNum = OxmlElement('w:pgNumType')
+    pgNum.set(qn('w:fmt'),   fmt)
+    pgNum.set(qn('w:start'), str(start))
+    sectPr.append(pgNum)
+
+
+def _suppress_pgnum(section):
+    """Supprime la numérotation sur une section (page titre)."""
+    sectPr = section._sectPr
+    for e in sectPr.findall(qn('w:pgNumType')): sectPr.remove(e)
+
+
+def _section_break(doc, break_type='nextPage', pgnum_fmt=None, pgnum_start=1):
+    """Insère un saut de section dans un paragraphe vide."""
     p      = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after  = Pt(0)
@@ -229,70 +220,86 @@ def _add_section_break(doc, break_type='nextPage', pgnum_fmt='decimal', pgnum_st
     sectPr = OxmlElement('w:sectPr')
     typeEl = OxmlElement('w:type'); typeEl.set(qn('w:val'), break_type)
     sectPr.append(typeEl)
-    pgNum  = OxmlElement('w:pgNumType')
-    pgNum.set(qn('w:fmt'),   pgnum_fmt)
-    pgNum.set(qn('w:start'), str(pgnum_start))
-    sectPr.append(pgNum)
+    if pgnum_fmt:
+        pgNum = OxmlElement('w:pgNumType')
+        pgNum.set(qn('w:fmt'),   pgnum_fmt)
+        pgNum.set(qn('w:start'), str(pgnum_start))
+        sectPr.append(pgNum)
     pPr.append(sectPr)
-    return sectPr, p
+    return p
 
 
 # ─────────────────────────────────────────────
 # STYLES POLY
 # ─────────────────────────────────────────────
 
-def _register_poly_styles(doc, font):
+def _register_styles(doc, font):
     from docx.enum.style import WD_STYLE_TYPE
 
     def _get(name):
-        try: return doc.styles[name]
-        except KeyError:
-            return doc.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+        try:    return doc.styles[name]
+        except: return doc.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
 
-    specs = {
-        'CORPS_Titre1': dict(size=14, bold=True,         sb=18, sa=6),
-        'CORPS_Titre2': dict(size=12, bold=True,         sb=12, sa=6),
-        'CORPS_Titre3': dict(size=12, bold=True, it=True, sb=10, sa=6),
-        'CORPS_Titre4': dict(size=12, it=True,           sb=10, sa=6, li=0.95),
-        'Body Text':    dict(size=12,                    sb=0,  sa=6),
-        'CORPS_REFERENCES': dict(size=12, single=True,   sb=0,  sa=4, li=0.75, fi=-0.75),
-        'CORPS_ListePuceHérarchisée': dict(size=12,      sb=0,  sa=4, li=0.75),
-        'LEGENDE_Figure':  dict(size=10, it=True,        sb=4,  sa=10),
-        'LEGENDE_Tableau': dict(size=10, bold=True,      sb=10, sa=4),
-    }
+    # Body Text
+    bt = _get('Body Text')
+    bt.font.name = font; bt.font.size = Pt(12)
+    bt.paragraph_format.space_before      = Pt(0)
+    bt.paragraph_format.space_after       = Pt(6)
+    bt.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
 
-    for name, sp in specs.items():
-        s  = _get(name)
+    # Références
+    cr = _get('CORPS_REFERENCES')
+    cr.font.name = font; cr.font.size = Pt(12)
+    cr.paragraph_format.space_before      = Pt(0)
+    cr.paragraph_format.space_after       = Pt(6)
+    cr.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    cr.paragraph_format.left_indent       = Cm(0.75)
+    cr.paragraph_format.first_line_indent = Cm(-0.75)
+
+    # Légendes
+    lf = _get('LEGENDE_Figure')
+    lf.font.name = font; lf.font.size = Pt(10); lf.font.italic = True
+    lf.paragraph_format.space_before = Pt(4); lf.paragraph_format.space_after = Pt(10)
+
+    lt = _get('LEGENDE_Tableau')
+    lt.font.name = font; lt.font.size = Pt(10); lt.font.bold = True
+    lt.paragraph_format.space_before = Pt(10); lt.paragraph_format.space_after = Pt(4)
+
+    # Appliquer les styles Heading 1–4 nativement Word pour que la TDM fonctionne
+    _style_heading(doc, 'Heading 1', font, 14, bold=True,  sb=18, sa=6)
+    _style_heading(doc, 'Heading 2', font, 12, bold=True,  sb=12, sa=6)
+    _style_heading(doc, 'Heading 3', font, 12, bold=True,  italic=True, sb=10, sa=6)
+    _style_heading(doc, 'Heading 4', font, 12, italic=True, sb=10, sa=6)
+
+
+def _style_heading(doc, style_name, font, size, bold=False, italic=False, sb=0, sa=6):
+    try:
+        s = doc.styles[style_name]
         s.font.name   = font
-        s.font.size   = Pt(sp['size'])
-        s.font.bold   = sp.get('bold', False)
-        s.font.italic = sp.get('it', False)
-        pf = s.paragraph_format
-        pf.space_before = Pt(sp.get('sb', 0))
-        pf.space_after  = Pt(sp.get('sa', 6))
-        if sp.get('single'):
-            pf.line_spacing_rule = WD_LINE_SPACING.SINGLE
-        else:
-            pf.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
-        if sp.get('li'):  pf.left_indent        = Cm(sp['li'])
-        if sp.get('fi'):  pf.first_line_indent  = Cm(sp['fi'])
+        s.font.size   = Pt(size)
+        s.font.bold   = bold
+        s.font.italic = italic
+        s.font.color.rgb = POLY_DARK
+        s.paragraph_format.space_before      = Pt(sb)
+        s.paragraph_format.space_after       = Pt(sa)
+        s.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+    except Exception:
+        pass
 
 
 # ─────────────────────────────────────────────
 # EN-TÊTE — simple et professionnel
 # ─────────────────────────────────────────────
 
-def _build_header(section, config, font="Cambria"):
-    """
-    En-tête épuré : titre du rapport à gauche, numéro de page à droite,
-    fin filet gris discret en dessous. Pas de bloc "Document/Révision"
-    de type contrôle qualité — look rapport académique, pas gabarit ISO.
-    """
-    report_title = config.get("report_title", "").strip()
-
+def _build_header(section, config, font="Cambria", show=True):
     header = section.header
     header.is_linked_to_previous = False
     for p in header.paragraphs: p.clear()
+
+    if not show:
+        return  # page titre : en-tête vide
+
+    report_title = config.get("report_title", "").strip()
 
     tbl = header.add_table(1, 2, width=Inches(6.3))
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -302,7 +309,6 @@ def _build_header(section, config, font="Cambria"):
     _nil_borders(tbl.cell(0,0)); _nil_borders(tbl.cell(0,1))
 
     fs = 9
-
     p_left = tbl.cell(0,0).paragraphs[0]
     r_left = p_left.add_run(report_title[:70] if report_title else "")
     r_left.font.name = font; r_left.font.size = Pt(fs)
@@ -317,7 +323,6 @@ def _build_header(section, config, font="Cambria"):
     r_mid.font.name = font; r_mid.font.size = Pt(fs); r_mid.font.color.rgb = POLY_GRAY
     _field(p_right, 'SECTIONPAGES \\* MERGEFORMAT', font, fs)
 
-    # Filet fin gris discret (pas rouge, pas épais)
     p_rule = header.add_paragraph()
     p_rule.paragraph_format.space_before = Pt(3)
     p_rule.paragraph_format.space_after  = Pt(0)
@@ -330,8 +335,7 @@ def _build_header(section, config, font="Cambria"):
 
 
 # ─────────────────────────────────────────────
-# PAGE TITRE — style ton rapport MEC3520
-# Logo centré en haut, texte centré, tableau seulement si équipe
+# PAGE TITRE — pleine page, sans numéro, logo centré
 # ─────────────────────────────────────────────
 
 def build_title_page(doc, config):
@@ -339,123 +343,135 @@ def build_title_page(doc, config):
     course_code  = config.get("course_code", "").strip()
     course_name  = config.get("course_name", "").strip()
     group_number = config.get("group_number", "").strip()
-    report_title = config.get("report_title", "Titre du rapport").strip()
+    report_title = config.get("report_title", "").strip()
     professors   = [p.strip() for p in config.get("professors", []) if str(p).strip()]
     members      = [m for m in config.get("members", [])
                     if (m.get("name","") if isinstance(m,dict) else str(m)).strip()]
     doc_date     = config.get("doc_date", "").strip()
     is_individual= config.get("is_individual", False)
+    semester     = config.get("semester", "").strip()
 
     section = doc.sections[0]
-    _set_margins(section)
-    _build_header(section, config, font)
+    _set_margins(section, top=2.5, bottom=2.5)
+    _build_header(section, config, font, show=False)  # en-tête vide sur page titre
+    _suppress_pgnum(section)  # pas de numéro sur la page titre
 
-    sectPr = section._sectPr
-    pgNum  = OxmlElement('w:pgNumType')
-    pgNum.set(qn('w:fmt'), 'decimal'); pgNum.set(qn('w:start'), '1')
-    sectPr.append(pgNum)
-
-    # ── Logo Poly centré ─────────────────────
+    # ── Logo centré ──────────────────────────
+    sp = Pt(0)
     if os.path.exists(LOGO_PATH):
         p_logo = doc.add_paragraph()
         p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_logo.paragraph_format.space_before = Pt(24)
-        p_logo.paragraph_format.space_after  = Pt(24)
+        p_logo.paragraph_format.space_before = Pt(40)
+        p_logo.paragraph_format.space_after  = Pt(30)
         run_logo = p_logo.add_run()
-        run_logo.add_picture(LOGO_PATH, width=Inches(2.8))
+        run_logo.add_picture(LOGO_PATH, width=Inches(2.6))
     else:
-        # Fallback texte si logo absent
-        p_logo = _para(doc, "POLYTECHNIQUE MONTRÉAL", font=font, size=16,
-                       bold=True, color=POLY_RED,
-                       align=WD_ALIGN_PARAGRAPH.CENTER, sb=36, sa=24)
+        sp = Pt(60)
 
-    # ── Cours + groupe ───────────────────────
+    # ── Cours ────────────────────────────────
     if course_code or course_name:
         txt = " — ".join(filter(None, [course_code, course_name]))
         p_c = doc.add_paragraph()
         p_c.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_c.paragraph_format.space_before = Pt(0)
-        p_c.paragraph_format.space_after  = Pt(0)
-        r = p_c.add_run(txt)
-        r.font.name = font; r.font.size = Pt(12); r.bold = True
+        p_c.paragraph_format.space_before = sp
+        p_c.paragraph_format.space_after  = Pt(2)
+        _run(p_c, txt, font, 12, bold=True)
 
     if group_number:
         p_g = doc.add_paragraph()
         p_g.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_g.paragraph_format.space_before = Pt(0)
-        p_g.paragraph_format.space_after  = Pt(18)
-        _run(p_g, f"Groupe-cours no {group_number}", font, 12)
+        p_g.paragraph_format.space_after  = Pt(2)
+        _run(p_g, f"Groupe-cours n° {group_number}", font, 12)
+
+    if semester:
+        p_s = doc.add_paragraph()
+        p_s.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_s.paragraph_format.space_before = Pt(0)
+        p_s.paragraph_format.space_after  = Pt(30)
+        _run(p_s, semester, font, 12)
     else:
-        doc.add_paragraph().paragraph_format.space_after = Pt(18)
+        p_sp = doc.add_paragraph()
+        p_sp.paragraph_format.space_after = Pt(30)
 
     # ── Titre du rapport ─────────────────────
-    p_t = doc.add_paragraph()
-    p_t.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_t.paragraph_format.space_before = Pt(0)
-    p_t.paragraph_format.space_after  = Pt(24)
-    _run(p_t, report_title, font, 13)
+    if report_title:
+        p_t = doc.add_paragraph()
+        p_t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_t.paragraph_format.space_before = Pt(0)
+        p_t.paragraph_format.space_after  = Pt(40)
+        _run(p_t, report_title, font, 14)
 
-    # ── Présenté à ───────────────────────────
+    # ── Présenté à — une ligne vide puis un prof par ligne ──
     if professors:
-        p_pr = doc.add_paragraph()
-        p_pr.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_pr.paragraph_format.space_before = Pt(0)
-        p_pr.paragraph_format.space_after  = Pt(6)
-        _run(p_pr, "Présenté à " + ", ".join(professors), font, 12)
+        p_pr_label = doc.add_paragraph()
+        p_pr_label.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_pr_label.paragraph_format.space_before = Pt(0)
+        p_pr_label.paragraph_format.space_after  = Pt(6)
+        _run(p_pr_label, "Présenté à", font, 12)
 
-    # ── Auteur(s) ────────────────────────────
-    if is_individual:
+        # Ligne vide
+        p_blank = doc.add_paragraph()
+        p_blank.paragraph_format.space_before = Pt(0)
+        p_blank.paragraph_format.space_after  = Pt(0)
+
+        for prof in professors:
+            p_p = doc.add_paragraph()
+            p_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_p.paragraph_format.space_before = Pt(0)
+            p_p.paragraph_format.space_after  = Pt(4)
+            _run(p_p, prof, font, 12)
+
+    # ── Fait par ─────────────────────────────
+    if is_individual and members:
         p_fb = doc.add_paragraph()
         p_fb.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_fb.paragraph_format.space_before = Pt(24)
+        p_fb.paragraph_format.space_before = Pt(30)
         p_fb.paragraph_format.space_after  = Pt(6)
         _run(p_fb, "Fait par", font, 12)
-        for m in (members if members else []):
-            nom = m.get("name","") if isinstance(m,dict) else str(m)
-            mat = m.get("matricule","") if isinstance(m,dict) else ""
-            line = f"{nom}  {mat}".strip()
-            p_m = doc.add_paragraph()
-            p_m.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p_m.paragraph_format.space_before = Pt(0)
-            p_m.paragraph_format.space_after  = Pt(2)
-            _run(p_m, line, font, 12)
-    else:
-        # Travail d'équipe : "Fait par" + tableau signatures
+        m   = members[0]
+        nom = m.get("name","") if isinstance(m,dict) else str(m)
+        mat = m.get("matricule","") if isinstance(m,dict) else ""
+        p_m = doc.add_paragraph()
+        p_m.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_m.paragraph_format.space_before = Pt(0)
+        p_m.paragraph_format.space_after  = Pt(4)
+        _run(p_m, f"{nom}  {mat}".strip(), font, 12)
+
+    elif not is_individual:
         p_fb = doc.add_paragraph()
         p_fb.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_fb.paragraph_format.space_before = Pt(24)
+        p_fb.paragraph_format.space_before = Pt(30)
         p_fb.paragraph_format.space_after  = Pt(12)
         _run(p_fb, "Fait par", font, 12)
 
-        n = max(len(members), 4)
-        tbl = doc.add_table(rows=n+1, cols=3)
-        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-
-        hdr_w = [Inches(2.0), Inches(1.0), Inches(3.0)]
-        hdrs  = ["Nom, Prénom", "Matricule", "_______Signatures requises_______"]
+        # Tableau avec signatures (inchangé)
+        n       = max(len(members), 4)
+        sig_tbl = doc.add_table(rows=n+1, cols=3)
+        sig_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        hdr_w   = [Inches(2.0), Inches(1.0), Inches(3.0)]
+        hdrs    = ["Nom, Prénom", "Matricule", "_______Signatures requises_______"]
         for j, (h, w) in enumerate(zip(hdrs, hdr_w)):
-            c = tbl.cell(0, j); c.width = w
+            c = sig_tbl.cell(0, j); c.width = w
             _shade_cell(c, "1F1F1F"); _cell_borders(c, "1F1F1F")
             p = c.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             r = p.add_run(h); r.font.name=font; r.font.size=Pt(10)
             r.bold=True; r.font.color.rgb=WHITE
-
         for i in range(n):
-            row = tbl.rows[i+1]
+            row = sig_tbl.rows[i+1]
             m   = members[i] if i < len(members) else None
             nom = (m.get("name","") if isinstance(m,dict) else str(m)) if m else ""
             mat = (m.get("matricule","") if isinstance(m,dict) else "") if m else ""
-            sig = "_" * 42
-            for j, (val, w) in enumerate(zip([nom, mat, sig], hdr_w)):
-                c = row.cells[j]; c.width=w; _cell_borders(c, "AAAAAA")
+            for j, (val, w) in enumerate(zip([nom, mat, "_"*42], hdr_w)):
+                c = row.cells[j]; c.width=w; _cell_borders(c,"AAAAAA")
                 p = c.paragraphs[0]; p.alignment=WD_ALIGN_PARAGRAPH.LEFT
-                r = p.add_run(val); r.font.name=font; r.font.size=Pt(10)
+                _run(p, val, font, 10)
 
     # ── Date ─────────────────────────────────
     if doc_date:
         p_d = doc.add_paragraph()
         p_d.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_d.paragraph_format.space_before = Pt(24)
+        p_d.paragraph_format.space_before = Pt(30)
         p_d.paragraph_format.space_after  = Pt(0)
         _run(p_d, f"Le {doc_date}", font, 12)
         p_m2 = doc.add_paragraph()
@@ -464,11 +480,23 @@ def build_title_page(doc, config):
         p_m2.paragraph_format.space_after  = Pt(0)
         _run(p_m2, "à Montréal", font, 12)
 
-    _page_break(doc)
+
+# ─────────────────────────────────────────────
+# TITRE DE PAGE PRÉLIMINAIRE — centré, haut de page
+# ─────────────────────────────────────────────
+
+def _prelim_title(doc, title, font):
+    """Titre centré en haut pour TDM, listes, références, annexes."""
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after  = Pt(18)
+    r = p.add_run(title)
+    r.font.name = font; r.font.size = Pt(16); r.bold = True
 
 
 # ─────────────────────────────────────────────
-# RÉSUMÉ + ABSTRACT
+# RÉSUMÉ + ABSTRACT — champs optionnels
 # ─────────────────────────────────────────────
 
 def build_resume_abstract(doc, config):
@@ -479,35 +507,46 @@ def build_resume_abstract(doc, config):
     keywords_fr = config.get("keywords_fr", "").strip()
     keywords_en = config.get("keywords_en", "").strip()
 
+    PLACEHOLDER = (
+        "[ À rédiger après la complétion du rapport. "
+        "Supprimer ce texte et le remplacer par votre résumé. ]"
+    )
+    PLACEHOLDER_EN = (
+        "[ To be written after the report is completed. "
+        "Delete this text and replace with your abstract. ]"
+    )
+
     def sec(title):
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(12)
         p.paragraph_format.space_after  = Pt(6)
-        r = p.add_run(title); r.font.name=font; r.font.size=Pt(size); r.bold=True
+        _run(p, title, font, size, bold=True)
 
     sec("Résumé")
-    try: p = doc.add_paragraph(style='Body Text')
+    try:   p = doc.add_paragraph(style='Body Text')
     except: p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    _run(p, resume_fr if resume_fr else
-         "Insérer le résumé ici (max. 1 page). Mise en contexte, objectif, résultats, prochaines actions.",
-         font, size)
+    txt = resume_fr if resume_fr else PLACEHOLDER
+    r   = _run(p, txt, font, size)
+    if not resume_fr: r.italic = True; r.font.color.rgb = POLY_GRAY
+
     if keywords_fr:
-        try: pk = doc.add_paragraph(style='Body Text')
+        try:   pk = doc.add_paragraph(style='Body Text')
         except: pk = doc.add_paragraph()
         pk.paragraph_format.space_after = Pt(12)
         rb = pk.add_run("Mots clés : "); rb.font.name=font; rb.font.size=Pt(size); rb.bold=True
         pk.add_run(keywords_fr).font.name = font
 
     sec("Abstract")
-    try: p = doc.add_paragraph(style='Body Text')
+    try:   p = doc.add_paragraph(style='Body Text')
     except: p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    _run(p, abstract_en if abstract_en else
-         "Insert abstract here (max. 1 page). Context, objective, main results, next steps.",
-         font, size)
+    txt = abstract_en if abstract_en else PLACEHOLDER_EN
+    r   = _run(p, txt, font, size, italic=(not abstract_en))
+    if not abstract_en: r.font.color.rgb = POLY_GRAY
+
     if keywords_en:
-        try: pk = doc.add_paragraph(style='Body Text')
+        try:   pk = doc.add_paragraph(style='Body Text')
         except: pk = doc.add_paragraph()
         pk.paragraph_format.space_after = Pt(0)
         rb = pk.add_run("Keywords: "); rb.font.name=font; rb.font.size=Pt(size); rb.bold=True
@@ -523,87 +562,87 @@ def build_resume_abstract(doc, config):
 def build_toc_section(doc, config):
     font = config.get("font", "Cambria")
 
-    def sec(title):
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after  = Pt(8)
-        r = p.add_run(title); r.font.name=font; r.font.size=Pt(14); r.bold=True
-
-    sec("Table des matières")
+    _prelim_title(doc, "Table des matières", font)
     _toc_field(doc, 'TOC \\o "1-4" \\h \\z \\u', font,
                "[ Ctrl+A → F9 dans Word pour mettre à jour ]")
     _page_break(doc)
 
-    sec("Liste des tableaux")
+    _prelim_title(doc, "Liste des tableaux", font)
     _toc_field(doc, 'TOC \\h \\z \\c "Tableau"', font,
-               "[ Liste des tableaux — mise à jour auto (F9) ]")
+               "[ Liste des tableaux — F9 pour mettre à jour ]")
     _page_break(doc)
 
-    sec("Liste des figures")
+    _prelim_title(doc, "Liste des figures", font)
     _toc_field(doc, 'TOC \\h \\z \\c "Figure"', font,
-               "[ Liste des figures — mise à jour auto (F9) ]")
+               "[ Liste des figures — F9 pour mettre à jour ]")
     _page_break(doc)
 
 
 # ─────────────────────────────────────────────
-# SECTIONS — placeholders structurés
-# L'utilisateur écrit son texte dans Word directement
+# TITRES DE SECTIONS — styles Word natifs Heading 1/2/3/4
 # ─────────────────────────────────────────────
 
 def _heading(doc, text, level, font, number=""):
-    style_map = {1:'CORPS_Titre1', 2:'CORPS_Titre2', 3:'CORPS_Titre3', 4:'CORPS_Titre4'}
-    try: p = doc.add_paragraph(style=style_map.get(level,'CORPS_Titre1'))
-    except: p = doc.add_paragraph()
+    """
+    Utilise les styles Word natifs Heading 1/2/3/4 pour que
+    la table des matières se mette à jour automatiquement.
+    """
+    style_name = f"Heading {level}"
+    try:
+        p = doc.add_paragraph(style=style_name)
+    except Exception:
+        p = doc.add_paragraph()
+
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.space_before = Pt(18 if level==1 else 12)
+    p.paragraph_format.space_before = Pt(18 if level == 1 else 12)
     p.paragraph_format.space_after  = Pt(6)
     p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+
     full = f"{number}\t{text}" if number else text
-    r = p.add_run(full); r.font.name=font
-    r.font.size = Pt(14 if level==1 else 12)
-    r.bold   = level <= 2
-    r.italic = level >= 3
+    r = p.add_run(full)
+    r.font.name  = font
+    r.font.size  = Pt(14 if level == 1 else 12)
+    r.bold       = level <= 2
+    r.italic     = level == 3
+    r.font.color.rgb = POLY_DARK
     return p
 
 
-def _placeholder_text(doc, font, size, text):
-    """Paragraphe gris italique — zone à remplir par l'utilisateur."""
-    try: p = doc.add_paragraph(style='Body Text')
+def _placeholder_text(doc, font, size):
+    try:   p = doc.add_paragraph(style='Body Text')
     except: p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    r = p.add_run(text); r.font.name=font; r.font.size=Pt(size)
+    r = p.add_run(
+        "[ Rédiger le contenu de cette section directement dans Word. "
+        "Supprimer ce texte gris avant de remettre le rapport. ]"
+    )
+    r.font.name=font; r.font.size=Pt(size)
     r.italic=True; r.font.color.rgb=POLY_GRAY
     return p
 
 
 def _insert_figure_placeholder(doc, font, size, fig_num, caption=""):
-    """Zone réservée figure + légende."""
-    # Cadre gris pour l'espace de la figure
     tbl = doc.add_table(1, 1)
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-    c = tbl.cell(0, 0)
-    c.width = Inches(5.0)
-    _shade_cell(c, "F2F2F2")
-    _cell_borders(c, "CCCCCC", sz=4)
+    c = tbl.cell(0, 0); c.width = Inches(5.0)
+    _shade_cell(c, "F2F2F2"); _cell_borders(c, "CCCCCC", sz=4)
     cp = c.paragraphs[0]
     cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
     cp.paragraph_format.space_before = Pt(24)
     cp.paragraph_format.space_after  = Pt(24)
-    r = cp.add_run(f"[ Insérer Figure {fig_num} ici ]")
+    r = cp.add_run(f"[ Insérer la Figure {fig_num} ici ]")
     r.font.name=font; r.font.size=Pt(10); r.italic=True; r.font.color.rgb=POLY_GRAY
 
-    # Légende avec style LEGENDE_Figure (capturée par la liste des figures)
     cap_text = caption if caption else f"Description de la figure {fig_num}."
-    try: p_cap = doc.add_paragraph(style='LEGENDE_Figure')
+    try:   p_cap = doc.add_paragraph(style='LEGENDE_Figure')
     except: p_cap = doc.add_paragraph()
     p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_cap.paragraph_format.space_before = Pt(4)
     p_cap.paragraph_format.space_after  = Pt(12)
 
-    # Champ SEQ Figure pour numérotation automatique
     r_pre = p_cap.add_run("Figure "); r_pre.font.name=font; r_pre.font.size=Pt(10); r_pre.italic=True
     seq_run = p_cap.add_run()
-    b = OxmlElement('w:fldChar'); b.set(qn('w:fldCharType'), 'begin'); seq_run._r.append(b)
+    b = OxmlElement('w:fldChar'); b.set(qn('w:fldCharType'),'begin'); seq_run._r.append(b)
     ins = OxmlElement('w:instrText'); ins.set(qn('xml:space'),'preserve')
     ins.text = ' SEQ Figure \\* ARABIC '; seq_run._r.append(ins)
     s = OxmlElement('w:fldChar'); s.set(qn('w:fldCharType'),'separate'); seq_run._r.append(s)
@@ -612,14 +651,12 @@ def _insert_figure_placeholder(doc, font, size, fig_num, caption=""):
     e = OxmlElement('w:fldChar'); e.set(qn('w:fldCharType'),'end'); er._r.append(e)
     r_cap = p_cap.add_run(f" — {cap_text}")
     r_cap.font.name=font; r_cap.font.size=Pt(10); r_cap.italic=True
-    return p_cap
 
 
 def _insert_table_placeholder(doc, font, size, tbl_num, caption="", rows=3, cols=3):
-    """Tableau placeholder avec en-tête + légende."""
-    # Légende AVANT le tableau (convention Poly)
+    """Tableau placeholder — nombre de lignes/colonnes configurable."""
     cap_text = caption if caption else f"Description du tableau {tbl_num}."
-    try: p_cap = doc.add_paragraph(style='LEGENDE_Tableau')
+    try:   p_cap = doc.add_paragraph(style='LEGENDE_Tableau')
     except: p_cap = doc.add_paragraph()
     p_cap.paragraph_format.space_before = Pt(10)
     p_cap.paragraph_format.space_after  = Pt(4)
@@ -636,26 +673,27 @@ def _insert_table_placeholder(doc, font, size, tbl_num, caption="", rows=3, cols
     r_cap = p_cap.add_run(f" : {cap_text}")
     r_cap.font.name=font; r_cap.font.size=Pt(10); r_cap.bold=True
 
-    # Tableau avec en-tête gris
+    # Tableau avec le bon nombre de lignes/colonnes
     data_tbl = doc.add_table(rows=rows, cols=cols)
     data_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     for j in range(cols):
         c = data_tbl.cell(0, j)
         _shade_cell(c, "1F1F1F"); _cell_borders(c, "1F1F1F")
-        p = c.paragraphs[0]; p.alignment=WD_ALIGN_PARAGRAPH.CENTER
+        p = c.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r = p.add_run(f"En-tête {j+1}"); r.font.name=font; r.font.size=Pt(10)
         r.bold=True; r.font.color.rgb=WHITE
     for i in range(1, rows):
         for j in range(cols):
             c = data_tbl.cell(i,j); _cell_borders(c,"AAAAAA")
             if i % 2 == 0: _shade_cell(c, "F7F7F7")
-            p = c.paragraphs[0]
-            r = p.add_run("—"); r.font.name=font; r.font.size=Pt(10)
+            _run(c.paragraphs[0], "—", font, 10)
 
-    p_after = doc.add_paragraph()
-    p_after.paragraph_format.space_after = Pt(10)
-    return p_after
+    doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
+
+# ─────────────────────────────────────────────
+# CORPS DU RAPPORT
+# ─────────────────────────────────────────────
 
 def build_body_sections(doc, config):
     font  = config.get("font", "Cambria")
@@ -664,12 +702,12 @@ def build_body_sections(doc, config):
 
     if not secs:
         secs = [
-            {"title":"Introduction","level":1,"figures":0,"tables":0},
-            {"title":"Mise en contexte","level":2,"figures":0,"tables":0},
-            {"title":"Objectifs spécifiques","level":2,"figures":0,"tables":0},
-            {"title":"Développement","level":1,"figures":1,"tables":1},
-            {"title":"Résultats","level":1,"figures":1,"tables":0},
-            {"title":"Conclusion","level":1,"figures":0,"tables":0},
+            {"title":"Introduction",         "level":1,"figures":0,"tables":0,"tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
+            {"title":"Mise en contexte",     "level":2,"figures":0,"tables":0,"tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
+            {"title":"Objectifs",            "level":2,"figures":0,"tables":0,"tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
+            {"title":"Développement",        "level":1,"figures":0,"tables":0,"tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
+            {"title":"Résultats",            "level":1,"figures":0,"tables":0,"tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
+            {"title":"Conclusion",           "level":1,"figures":0,"tables":0,"tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
         ]
 
     counters  = [0,0,0,0]
@@ -678,109 +716,20 @@ def build_body_sections(doc, config):
 
     for sec in secs:
         lvl   = sec.get("level",1) - 1
-        title = sec.get("title","")
+        title = sec.get("title","Section sans titre")
         n_fig = int(sec.get("figures", 0))
         n_tbl = int(sec.get("tables",  0))
-        fig_captions = sec.get("fig_captions", [])
-        tbl_captions = sec.get("tbl_captions", [])
+        t_rows = int(sec.get("tbl_rows", 3))
+        t_cols = int(sec.get("tbl_cols", 3))
+        fig_caps = sec.get("fig_captions", []) or []
+        tbl_caps = sec.get("tbl_captions", []) or []
 
         counters[lvl] += 1
         for i in range(lvl+1, 4): counters[i] = 0
         num = ".".join(str(counters[i]) for i in range(lvl+1))
 
         _heading(doc, title, lvl+1, font, number=num)
-
-        # Placeholder texte
-        _placeholder_text(doc, font, size,
-            "[ Rédiger le contenu de cette section directement dans Word. "
-            "Supprimer ce texte gris avant de remettre le rapport. ]")
-
-        # Figures
-        for fi in range(n_fig):
-            fig_count += 1
-            cap = fig_captions[fi] if fi < len(fig_captions) else ""
-            _insert_figure_placeholder(doc, font, size, fig_count, cap)
-
-        # Tableaux
-        for ti in range(n_tbl):
-            tbl_count += 1
-            cap = tbl_captions[ti] if ti < len(tbl_captions) else ""
-            _insert_table_placeholder(doc, font, size, tbl_count, cap)
-
-
-# ─────────────────────────────────────────────
-# RÉFÉRENCES
-# ─────────────────────────────────────────────
-
-def build_references(doc, config):
-    font       = config.get("font", "Cambria")
-    size       = config.get("font_size", 12)
-    ref_style  = config.get("ref_style", "IEEE")
-    references = config.get("references", [])  # list of dicts {formatted, url}
-
-    _heading(doc, "Références", 1, font)
-
-    if not references:
-        _placeholder_text(doc, font, size,
-            "[ Aucune référence. Ajouter les sources ici. ]")
-        return
-
-    for i, ref in enumerate(references, 1):
-        formatted = ref.get("formatted","") if isinstance(ref,dict) else str(ref)
-        url       = ref.get("url","")       if isinstance(ref,dict) else ""
-        if not formatted.strip(): continue
-
-        try: p = doc.add_paragraph(style='CORPS_REFERENCES')
-        except:
-            p = doc.add_paragraph()
-            p.paragraph_format.left_indent      = Cm(0.75)
-            p.paragraph_format.first_line_indent = Cm(-0.75)
-
-        prefix = f"[{i}]\t" if ref_style=="IEEE" else ""
-        r = p.add_run(prefix + formatted)
-        r.font.name=font; r.font.size=Pt(size)
-
-        # Lien hyperlien RÉEL et cliquable (pas juste du texte coloré)
-        if url:
-            sep = p.add_run("  —  ")
-            sep.font.name = font; sep.font.size = Pt(size-1)
-            sep.font.color.rgb = POLY_GRAY
-            _add_hyperlink(p, url, url, font, size-1)
-
-
-# ─────────────────────────────────────────────
-# ANNEXES — même logique que les sections
-# ─────────────────────────────────────────────
-
-def build_annexes(doc, config):
-    font    = config.get("font", "Cambria")
-    size    = config.get("font_size", 12)
-    annexes = config.get("annexes", [])
-    if not annexes: return
-
-    letters   = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    fig_count = config.get("_fig_count_start", 0)
-    tbl_count = config.get("_tbl_count_start", 0)
-
-    for i, annexe in enumerate(annexes):
-        letter      = letters[i] if i < len(letters) else str(i+1)
-        title       = annexe.get("title", f"Titre de l'annexe {letter}")
-        n_fig       = int(annexe.get("figures", 0))
-        n_tbl       = int(annexe.get("tables", 0))
-        fig_caps    = annexe.get("fig_captions", [])
-        tbl_caps    = annexe.get("tbl_captions", [])
-
-        _add_section_break(doc, 'nextPage', 'decimal', 1)
-
-        p_ann = doc.add_paragraph()
-        p_ann.paragraph_format.space_before = Pt(0)
-        p_ann.paragraph_format.space_after  = Pt(12)
-        r = p_ann.add_run(f"Annexe {letter} : {title}")
-        r.font.name=font; r.font.size=Pt(16); r.bold=True
-
-        _placeholder_text(doc, font, size,
-            "[ Rédiger le contenu de cette annexe directement dans Word. "
-            "Supprimer ce texte gris avant de remettre. ]")
+        _placeholder_text(doc, font, size)
 
         for fi in range(n_fig):
             fig_count += 1
@@ -790,7 +739,86 @@ def build_annexes(doc, config):
         for ti in range(n_tbl):
             tbl_count += 1
             cap = tbl_caps[ti] if ti < len(tbl_caps) else ""
-            _insert_table_placeholder(doc, font, size, tbl_count, cap)
+            _insert_table_placeholder(doc, font, size, tbl_count, cap, t_rows, t_cols)
+
+    return fig_count, tbl_count
+
+
+# ─────────────────────────────────────────────
+# RÉFÉRENCES — avec vrai lien cliquable
+# ─────────────────────────────────────────────
+
+def build_references(doc, config):
+    font       = config.get("font", "Cambria")
+    size       = config.get("font_size", 12)
+    ref_style  = config.get("ref_style", "IEEE")
+    references = config.get("references", [])
+
+    _prelim_title(doc, "Références", font)
+
+    if not references:
+        _placeholder_text(doc, font, size)
+        return
+
+    for i, ref in enumerate(references, 1):
+        formatted = ref.get("formatted","") if isinstance(ref,dict) else str(ref)
+        url       = ref.get("url","")       if isinstance(ref,dict) else ""
+        if not formatted.strip(): continue
+
+        try:   p = doc.add_paragraph(style='CORPS_REFERENCES')
+        except:
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent      = Cm(0.75)
+            p.paragraph_format.first_line_indent = Cm(-0.75)
+
+        prefix = f"[{i}]\t" if ref_style=="IEEE" else ""
+        _run(p, prefix + formatted, font, size)
+
+        if url:
+            sep = p.add_run("  —  ")
+            sep.font.name=font; sep.font.size=Pt(size-1); sep.font.color.rgb=POLY_GRAY
+            _add_hyperlink(p, url, url, font, size-1)
+
+
+# ─────────────────────────────────────────────
+# ANNEXES — numérotation de pages indépendante
+# ─────────────────────────────────────────────
+
+def build_annexes(doc, config, fig_count_start=0, tbl_count_start=0):
+    font    = config.get("font", "Cambria")
+    size    = config.get("font_size", 12)
+    annexes = config.get("annexes", [])
+    if not annexes: return
+
+    letters   = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    fig_count = fig_count_start
+    tbl_count = tbl_count_start
+
+    for i, annexe in enumerate(annexes):
+        letter  = letters[i] if i < len(letters) else str(i+1)
+        title   = annexe.get("title", f"Titre de l'annexe {letter}")
+        n_fig   = int(annexe.get("figures", 0))
+        n_tbl   = int(annexe.get("tables",  0))
+        t_rows  = int(annexe.get("tbl_rows", 3))
+        t_cols  = int(annexe.get("tbl_cols", 3))
+        fig_caps= annexe.get("fig_captions", []) or []
+        tbl_caps= annexe.get("tbl_captions", []) or []
+
+        # Saut de section : numérotation repart à 1 pour chaque annexe
+        _section_break(doc, 'nextPage', pgnum_fmt='decimal', pgnum_start=1)
+
+        _prelim_title(doc, f"Annexe {letter} : {title}", font)
+        _placeholder_text(doc, font, size)
+
+        for fi in range(n_fig):
+            fig_count += 1
+            cap = fig_caps[fi] if fi < len(fig_caps) else ""
+            _insert_figure_placeholder(doc, font, size, fig_count, cap)
+
+        for ti in range(n_tbl):
+            tbl_count += 1
+            cap = tbl_caps[ti] if ti < len(tbl_caps) else ""
+            _insert_table_placeholder(doc, font, size, tbl_count, cap, t_rows, t_cols)
 
 
 # ─────────────────────────────────────────────
@@ -798,29 +826,49 @@ def build_annexes(doc, config):
 # ─────────────────────────────────────────────
 
 def generate_poly_report(config: dict) -> BytesIO:
-    doc = Document()
+    """
+    Génère un rapport technique Polytechnique Montréal.
+
+    Numérotation des pages :
+      - Page titre      : aucun numéro
+      - Pages préliminaires (résumé, TDM…) : chiffres romains (i, ii, iii…)
+      - Corps du rapport à partir de l'Introduction : arabes (1, 2, 3…)
+      - Annexes : arabes indépendants par annexe (1, 2…)
+    """
+    doc       = Document()
     font_name = config.get("font", "Cambria")
     doc.styles['Normal'].font.name = font_name
     doc.styles['Normal'].font.size = Pt(config.get("font_size", 12))
-    _register_poly_styles(doc, font_name)
+    _register_styles(doc, font_name)
 
+    # ── 1. Page titre (Section 0 — aucun numéro) ──
     build_title_page(doc, config)
 
-    _add_section_break(doc, 'nextPage', 'lowerRoman', 1)
-    _set_margins(doc.sections[-1])
-    _build_header(doc.sections[-1], config, font_name)
+    # ── 2. Section préliminaire — chiffres romains ──
+    _section_break(doc, 'nextPage', pgnum_fmt='lowerRoman', pgnum_start=1)
+    sec_prelim = doc.sections[-1]
+    _set_margins(sec_prelim)
+    _build_header(sec_prelim, config, font_name, show=True)
+
     build_resume_abstract(doc, config)
     build_toc_section(doc, config)
 
-    _add_section_break(doc, 'nextPage', 'decimal', 1)
-    _set_margins(doc.sections[-1])
-    _build_header(doc.sections[-1], config, font_name)
-    build_body_sections(doc, config)
+    # ── 3. Corps — chiffres arabes à partir de 1 ──
+    _section_break(doc, 'nextPage', pgnum_fmt='decimal', pgnum_start=1)
+    sec_body = doc.sections[-1]
+    _set_margins(sec_body)
+    _build_header(sec_body, config, font_name, show=True)
+
+    fig_count, tbl_count = build_body_sections(doc, config)
     build_references(doc, config)
 
-    build_annexes(doc, config)
+    # ── 4. Annexes — numérotation indépendante ──
+    build_annexes(doc, config, fig_count, tbl_count)
 
-    for s in doc.sections: _set_margins(s)
+    # Marges sur toutes les sections restantes
+    for s in doc.sections:
+        if s.left_margin is None or s.left_margin.cm < 1:
+            _set_margins(s)
 
     buf = BytesIO()
     doc.save(buf)
@@ -830,39 +878,36 @@ def generate_poly_report(config: dict) -> BytesIO:
 
 if __name__ == "__main__":
     cfg = {
-        "font":"Cambria","font_size":12,
-        "doc_number":"","doc_date":"9 avril 2026",
-        "course_code":"MEC3520","course_name":"Industrialisation des produits",
-        "group_number":"02","report_title":"Recyclage à l'état solide des copeaux métalliques",
-        "semester":"Hiver 2026","professors":["Marwan Azzi"],
-        "members":[{"name":"Najeeb Lababidi","matricule":"2369834"},
-                   {"name":"Victor Béland","matricule":"2381714"}],
+        "font":"Cambria","font_size":12,"ref_style":"IEEE",
+        "doc_date":"17 juin 2026","course_code":"MEC 3520",
+        "course_name":"Industrialisation des produits","group_number":"02",
+        "report_title":"Test de validation PolyRapport","semester":"Hiver 2026",
+        "professors":["Prof. Marwan Azzi","Dr. Leila Ahmadi"],
+        "members":[{"name":"Étudiant Test","matricule":"2000000"}],
         "is_individual":False,
-        "resume_fr":"Ce rapport présente une analyse du procédé SSR.",
-        "abstract_en":"This report presents an analysis of the SSR process.",
-        "keywords_fr":"SSR, recyclage, aluminium","keywords_en":"SSR, recycling, aluminium",
-        "ref_style":"APA",
+        "resume_fr":"","abstract_en":"",
+        "keywords_fr":"","keywords_en":"",
         "sections":[
-            {"title":"Introduction","level":1,"figures":0,"tables":0},
-            {"title":"Description du procédé","level":1,"figures":1,"tables":0,
-             "fig_captions":["Schéma du procédé SSR (Adapté de Krolo et al., 2019)."]},
-            {"title":"Principe général","level":2,"figures":0,"tables":0},
-            {"title":"Résultats","level":1,"figures":0,"tables":1,
-             "tbl_captions":["Comparaison des procédés concurrents."]},
-            {"title":"Conclusion","level":1,"figures":0,"tables":0},
+            {"title":"Introduction","level":1,"figures":1,"tables":1,
+             "tbl_rows":4,"tbl_cols":3,
+             "fig_captions":["Schéma général."],"tbl_captions":["Données mesurées."]},
+            {"title":"Mise en contexte","level":2,"figures":0,"tables":0,
+             "tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
+            {"title":"Conclusion","level":1,"figures":0,"tables":0,
+             "tbl_rows":3,"tbl_cols":3,"fig_captions":[],"tbl_captions":[]},
         ],
         "references":[
-            {"formatted":"Altharan, Y. M. et al. (2024). A review on solid-state recycling of aluminum machining chips. Heliyon, 10(14), e34433.",
-             "url":"https://doi.org/10.1016/j.heliyon.2024.e34433"},
-            {"formatted":"Bocchi, S., D'Urso, G., & Giardini, C. (2025). Enhancing sustainability in aluminum recycling. Journal of Materials Engineering and Performance.",
-             "url":"https://doi.org/10.1007/s11665-025-11434-9"},
+            {"formatted":"Auteur, A. (2024). Titre. Journal, 10(2), 123.",
+             "url":"https://doi.org/10.1234/test"},
+            {"formatted":"Polytechnique Montréal. (2025). Planeur de secours.",
+             "url":"https://moodle.polymtl.ca/pluginfile.php/1449908/mod_resource/content/1/AER2110.pdf"},
         ],
         "annexes":[
-            {"title":"Données thermodynamiques","figures":1,"tables":1,
-             "fig_captions":["Profil de température mesuré."],
-             "tbl_captions":["Propriétés mécaniques mesurées."]},
+            {"title":"Données brutes","figures":0,"tables":1,
+             "tbl_rows":5,"tbl_cols":4,
+             "fig_captions":[],"tbl_captions":["Mesures complètes."]},
         ],
     }
     buf = generate_poly_report(cfg)
     with open("/home/claude/rapport_test.docx","wb") as f: f.write(buf.read())
-    print("✅ Généré: rapport_test.docx")
+    print("OK rapport_test.docx")
